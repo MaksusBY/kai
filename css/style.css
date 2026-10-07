@@ -1,0 +1,706 @@
+/* ================================================================
+   Расписание занятий — тёмная тема (по скриншоту-примеру)
+   ================================================================ */
+
+:root {
+  color-scheme: dark;          /* нативные поля/скроллы в тёмной теме */
+
+  --bg:            #0A0E0C;  /* фон страницы (почти чёрный) */
+  --surface:       #101614;  /* фон карточки пары */
+  --surface-2:     #191F1D;  /* невыбранные пилюли дней */
+  --surface-3:     #1E2422;  /* невыбранный сегмент недель */
+  --divider:       rgba(255, 255, 255, .07);
+
+  --text:          #F2F7F4;  /* названия пар (почти белый) */
+  --text-dim:      #A0B6AA;  /* время, преподаватель, аудитория */
+  --text-muted:    #6F7B75;  /* неактивные подписи */
+
+  --accent:        #0C3D2C;  /* зелёный: выбранный день/неделя */
+  --accent-text:   #E4FFF3;  /* мятный текст на зелёном */
+
+  --amber:         #FFD030;  /* предупреждение */
+  --danger:        #E06A55;  /* удалить */
+
+  --badge-lek-bg:  rgba(64, 196, 255, .16);   /* лек: голубой циан */
+  --badge-lek-fg:  #8AE5FF;
+  --badge-pr-bg:   rgba(74, 222, 128, .16);   /* пр: зелёный */
+  --badge-pr-fg:   #86FFBE;
+  --badge-lab-bg:  rgba(96, 165, 250, .18);   /* лаб: небесный */
+  --badge-lab-fg:  #A5D5FF;
+  --badge-kon-bg:  rgba(255, 150, 45, .18);   /* консультация: оранжевый */
+  --badge-kon-fg:  #FFC08A;
+  --badge-def-bg:  rgba(170, 180, 176, .14);  /* прочее: серый */
+  --badge-def-fg:  #C9D4CF;
+
+  --radius:        14px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html { background: var(--bg); }      /* подложка, если картинка не загрузится */
+body { background: transparent; }    /* чтобы слой фоновой картинки не перекрывался */
+
+/* Фон приложения — background.jpg: фиксированный слой позади контента,
+   лёгкий тёмный оверлей, чтобы текст читался на светлых участках */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(rgba(8, 11, 10, .3), rgba(8, 11, 10, .3)),
+    url("../165025-dark_blue_imac_color_matching_wallpaper_for_ipad_or_desktop-3840x2160.jpg") center / cover no-repeat;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+input {
+  font: inherit;
+  color-scheme: dark;
+}
+
+.app {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 14px 16px calc(20px + env(safe-area-inset-bottom));
+}
+
+/* ---------- Верх: баннер + группа ---------- */
+
+.top {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  flex: 0 1 auto;
+  max-width: 58%;
+  color: var(--amber);
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+
+.banner-icon {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  margin-top: 1px;
+  fill: currentColor;
+}
+
+.group {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: right;
+}
+
+.group-id {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+
+.group-course {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.group-icon {
+  width: 26px;
+  height: 26px;
+  color: #4C544F;
+}
+
+.icon-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--text-muted);
+}
+.icon-btn svg { width: 17px; height: 17px; }
+.icon-btn:active { background: var(--surface-2); }
+
+/* ---------- Переключатель недель ---------- */
+
+.week-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.week-btn {
+  flex: 1;
+  padding: 10px 0;
+  border-radius: 11px;
+  background: var(--surface-3);
+  color: var(--text-muted);
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: background .15s, color .15s;
+}
+
+.week-btn.active {
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+/* ---------- Дни недели ---------- */
+
+.days {
+  display: flex;
+  gap: 7px;
+  margin-bottom: 4px;
+}
+
+.day {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 0;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  transition: background .15s, color .15s;
+}
+
+.day.active {
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+/* ---------- Список пар ---------- */
+
+.schedule {
+  margin-top: 12px;
+}
+
+.row {
+  display: flex;
+  gap: 14px;
+  padding: 14px 0;
+  border-top: 1px solid var(--divider);
+}
+
+.row:first-child {
+  border-top-color: rgba(255, 255, 255, .1);
+}
+
+/* левая колонка со временем — внутри общего блока пары */
+.times {
+  flex: none;
+  width: 52px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 13px 12px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* карточка пары — один общий блок: время слева, содержимое справа */
+.card {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, .045);
+  border-radius: var(--radius);
+}
+
+.card-body {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px 13px;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.title {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 15.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text);
+}
+
+/* «Нет пары» — название предмета не указано: полупрозрачный серый */
+.title.no-pair {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: rgba(154, 168, 162, .55);
+}
+
+/* вложенный блок подгруппы внутри общего блока лабораторной */
+.subblock {
+  border: 1px solid rgba(255, 255, 255, .06);
+  border-radius: 10px;
+  padding: 10px 12px 11px;
+}
+
+.subblock + .subblock {
+  margin-top: 8px;
+}
+
+/* одиночная пара (не лаб): всё содержимое в такой же обводке,
+   как подгруппы у лабораторной */
+.pair-box {
+  border: 1px solid rgba(255, 255, 255, .06);
+  border-radius: 10px;
+  padding: 10px 12px 11px;
+}
+
+.subblock-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.subblock-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: rgba(154, 168, 162, .8);
+}
+
+.subblock .title {
+  margin-top: 6px;
+}
+
+.subblock-empty {
+  margin-top: 7px;
+  font-size: 13.5px;
+  color: rgba(154, 168, 162, .55);
+}
+
+/* бейдж типа занятия (лек/пр/лаб/конс) */
+.badge {
+  flex: none;
+  margin-top: 1px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+
+.badge--lek { background: var(--badge-lek-bg); color: var(--badge-lek-fg); border: 1px solid rgba(64, 196, 255, .35); }
+.badge--pr  { background: var(--badge-pr-bg);  color: var(--badge-pr-fg);  border: 1px solid rgba(74, 222, 128, .35); }
+.badge--lab { background: var(--badge-lab-bg); color: var(--badge-lab-fg); border: 1px solid rgba(96, 165, 250, .4); }
+.badge--kon { background: var(--badge-kon-bg); color: var(--badge-kon-fg); border: 1px solid rgba(255, 150, 45, .45); }
+.badge--def { background: var(--badge-def-bg); color: var(--badge-def-fg); border: 1px solid rgba(170, 180, 176, .3); }
+
+/* строки: преподаватель, аудитория */
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 9px;
+  font-size: 12.5px;
+  line-height: 1.3;
+  color: var(--text-dim);
+  overflow-wrap: anywhere;
+}
+
+.meta-icon {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  color: #6E7A74;
+}
+
+/* пустой день */
+.empty {
+  padding: 40px 0 32px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.empty .empty-title {
+  font-size: 15px;
+  color: var(--text-dim);
+}
+
+.empty .btn {
+  margin-top: 16px;
+}
+
+/* ссылка «редактировать» под списком */
+.edit-link {
+  display: block;
+  width: 100%;
+  margin-top: 22px;
+  padding: 10px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+.edit-link:active { color: var(--text-dim); }
+
+/* ---------- Кнопки ---------- */
+
+.btn {
+  display: inline-block;
+  padding: 11px 16px;
+  border-radius: 11px;
+  background: var(--surface-3);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  transition: opacity .15s;
+}
+.btn:active { opacity: .75; }
+
+.btn--primary { background: var(--accent); color: var(--accent-text); font-weight: 600; }
+.btn--danger  { background: rgba(224, 106, 85, .14); color: var(--danger); }
+.btn--ghost   { background: transparent; color: var(--text-muted); border: 1px solid var(--divider); }
+.btn--block   { display: block; width: 100%; }
+
+/* ---------- Панель редактора ---------- */
+
+.editor {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--bg);
+  padding: 14px 16px calc(30px + env(safe-area-inset-bottom));
+}
+.editor[hidden] { display: none; }
+
+/* та же фоновая картинка в редакторе, но сильнее затемнена — читаемость формы */
+.editor::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(rgba(8, 11, 10, .45), rgba(8, 11, 10, .45)),
+    url("../165025-dark_blue_imac_color_matching_wallpaper_for_ipad_or_desktop-3840x2160.jpg") center / cover no-repeat;
+}
+
+.editor-inner { max-width: 640px; margin: 0 auto; }
+
+.editor-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.editor-head h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.editor-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font-size: 16px;
+  line-height: 1;
+  flex: none;
+}
+
+.editor-section { margin-bottom: 20px; }
+
+.editor-section-title {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* поля мета-данных */
+.field { margin-bottom: 10px; }
+
+.field label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+.input {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 15px;
+  outline: none;
+}
+.input:focus { border-color: rgba(255, 255, 255, .2); }
+.input::placeholder { color: var(--text-muted); }
+
+/* список пар внутри редактора */
+.ed-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  margin-bottom: 8px;
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, .045);
+  border-radius: 12px;
+}
+
+.ed-item-main { flex: 1; min-width: 0; }
+
+.ed-item-time {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.ed-item-title {
+  margin-top: 2px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.ed-item-title--empty {
+  font-weight: 500;
+  color: rgba(154, 168, 162, .55);
+}
+
+.ed-item-actions { display: flex; gap: 4px; flex: none; }
+
+.ed-item-actions button {
+  padding: 7px 9px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  background: var(--surface-2);
+}
+.ed-item-actions .ed-del:active { color: var(--danger); }
+
+.ed-empty {
+  padding: 18px 0;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--text-muted);
+}
+
+/* форма пары */
+.ed-form {
+  margin-top: 12px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, .06);
+  border-radius: var(--radius);
+}
+.ed-form[hidden] { display: none; }
+
+.ed-form-row { display: flex; gap: 10px; }
+.ed-form-row .field { flex: 1; }
+
+.ed-chips { display: flex; gap: 7px; }
+
+.chip {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+.chip.active {
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.ed-form-actions {
+  display: flex;
+  gap: 9px;
+  margin-top: 14px;
+}
+.ed-form-actions .btn { flex: 1; }
+
+/* инструменты внизу редактора */
+.ed-tools { display: grid; gap: 9px; margin-top: 8px; }
+
+.ed-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* ---------- Уведомление ---------- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(26px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 90;
+  max-width: 86vw;
+  padding: 11px 18px;
+  border-radius: 12px;
+  background: #1C2422;
+  border: 1px solid rgba(255, 255, 255, .1);
+  color: var(--text);
+  font-size: 13.5px;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .5);
+}
+.toast[hidden] { display: none; }
+
+/* ---------- Окно экспорта ---------- */
+
+.export-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(0, 0, 0, .72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.export-overlay[hidden] { display: none; }
+
+.export-box {
+  width: min(560px, 100%);
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.export-box h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+.export-box p {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.export-box textarea {
+  width: 100%;
+  height: 180px;
+  resize: vertical;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  background: #0C100E;
+  color: var(--text-dim);
+  font: 12px/1.45 Consolas, "Courier New", monospace;
+  padding: 10px;
+  outline: none;
+}
+
+.export-box .btn { margin-top: 10px; }
+
+/* ---------- Стекло: матовый фон поверх обоев, как на iOS ---------- */
+.card,
+.editor,
+.ed-item,
+.week-btn:not(.active),
+.day:not(.active) {
+  background: rgba(16, 22, 20, .55);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+
+/* ---------- Выбранная вкладка — светло-небесный ---------- */
+.week-btn.active,
+.day.active {
+  background: rgba(154, 208, 250, .22);
+  color: #EAF6FF;
+}
+
+/* Кнопка «Добавить пару» в пустом дне — светло-небесный */
+.empty .btn--primary {
+  background: rgba(154, 208, 250, .22);
+  color: #EAF6FF;
+}
+
+/* Weeks/days/edit-link: inactive - #696969, active - #AFEEEE */
+.week-btn,
+.day,
+.edit-link {
+  color: #696969;
+}
+
+.week-btn.active,
+.day.active {
+  color: #AFEEEE;
+}
+/* Editor: primary buttons and selected chips - light sky, like the others */
+.btn--primary {
+  background: rgba(154, 208, 250, .22);
+  color: #EAF6FF;
+}
+
+.chip.active {
+  background: rgba(154, 208, 250, .22);
+  color: #AFEEEE;
+}
