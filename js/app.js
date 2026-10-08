@@ -158,10 +158,7 @@
   var toastTimer = null;
 
   function toast(msg) {
-    toastNode.textContent = msg;
-    toastNode.hidden = false;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { toastNode.hidden = true; }, 2600);
+    return;
   }
 
   /* ================= Основной вид ================= */
@@ -794,7 +791,6 @@
           hideForm();
           renderEdList();
           render();
-          toast("Пара удалена");
         });
         actionsBox.appendChild(delBtn);
 
@@ -892,7 +888,7 @@
       renderEdList();
       render();
       haptic("impact");
-      toast(wasEdit ? "Пара обновлена" : "Пара добавлена");
+
     }
 
     syncEdWeeks();
