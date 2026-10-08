@@ -566,9 +566,61 @@
     var timeRow = el("div", "ed-form-row");
     var fStart = buildField("Начало", "edStart", "08:00");
     var fEnd = buildField("Конец", "edEnd", "09:35");
+    fStart.input.type = "text";
+    fEnd.input.type = "text";
+    fStart.input.setAttribute("inputmode", "numeric");
+    fEnd.input.setAttribute("inputmode", "numeric");
+    fStart.input.setAttribute("maxlength", "5");
+    fEnd.input.setAttribute("maxlength", "5");
+    fStart.input.placeholder = "ЧЧ:ММ";
+    fEnd.input.placeholder = "ЧЧ:ММ";
     timeRow.appendChild(fStart.wrap);
     timeRow.appendChild(fEnd.wrap);
     form.appendChild(timeRow);
+    fStart.input.addEventListener("input", timeMaskInput);
+    fEnd.input.addEventListener("input", timeMaskInput);
+    fStart.input.addEventListener("blur", function () {
+      this.value = formatTime(this.value);
+    });
+    fEnd.input.addEventListener("blur", function () {
+      this.value = formatTime(this.value);
+    });
+    fStart.input.addEventListener("keydown", function (e) {
+      if (e.key === "Backspace") {
+        var el = this;
+        var pos = el.selectionStart || 0;
+        var v = el.value;
+        if (pos > 0 && v.charAt(pos - 1) === ":") {
+          e.preventDefault();
+          var digits = v.replace(/\D/g, "");
+          digits = digits.slice(0, -1);
+          var nv = digits;
+          if (digits.length > 2) nv = digits.slice(0, 2) + ":" + digits.slice(2);
+          else if (digits.length === 2) nv = digits + ":";
+          else if (digits.length === 1) nv = digits;
+          el.value = nv;
+          try { el.setSelectionRange(pos - 2 >= 0 ? pos - 2 : 0, pos - 2 >= 0 ? pos - 2 : 0); } catch (ex) {}
+        }
+      }
+    });
+    fEnd.input.addEventListener("keydown", function (e) {
+      if (e.key === "Backspace") {
+        var el = this;
+        var pos = el.selectionStart || 0;
+        var v = el.value;
+        if (pos > 0 && v.charAt(pos - 1) === ":") {
+          e.preventDefault();
+          var digits = v.replace(/\D/g, "");
+          digits = digits.slice(0, -1);
+          var nv = digits;
+          if (digits.length > 2) nv = digits.slice(0, 2) + ":" + digits.slice(2);
+          else if (digits.length === 2) nv = digits + ":";
+          else if (digits.length === 1) nv = digits;
+          el.value = nv;
+          try { el.setSelectionRange(pos - 2 >= 0 ? pos - 2 : 0, pos - 2 >= 0 ? pos - 2 : 0); } catch (ex) {}
+        }
+      }
+    });
 
     var fTitle = buildField("Название предмета", "edTitle", "Например: Физика");
     form.appendChild(fTitle.wrap);
@@ -751,14 +803,36 @@
       });
     }
 
+
+
+    function timeMaskInput(e) {
+      var el = e.target;
+      var pos = el.selectionStart || 0;
+      var digits = el.value.replace(/\D/g, "").slice(0, 4);
+      var before = el.value;
+      var v = "";
+      if (digits.length <= 2) {
+        v = digits;
+      } else {
+        v = digits.slice(0, 2) + ":" + digits.slice(2, 4);
+      }
+      el.value = v;
+      if (v !== before) {
+        var newPos = pos;
+        if (digits.length === 2 && before.indexOf(":") < 0) newPos = pos + 1;
+        if (digits.length === 3 && before.indexOf(":") < 0) newPos = pos + 1;
+        try { el.setSelectionRange(newPos, newPos); } catch (ex) {}
+      }
+    }
+
     function showForm(index) {
       ed.editIndex = index;
       var i = edRefs.inputs;
 
       if (index >= 0) {
         var pair = store.pairs(ed.week, ed.day)[index];
-        i.start.value = pair.start || "";
-        i.end.value = pair.end || "";
+        i.start.value = formatTime(pair.start || "");
+        i.end.value = formatTime(pair.end || "");
         i.title.value = pair.title || "";
         i.teacher.value = pair.teacher || "";
         i.room.value = pair.room || "";
@@ -776,7 +850,7 @@
 
       syncChips();
       form.hidden = false;
-      i.title.focus();
+      i.start.focus();
       form.scrollIntoView({ block: "nearest" });
     }
 
