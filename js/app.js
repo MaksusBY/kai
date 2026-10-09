@@ -11,6 +11,9 @@
     try {
       tg.ready();
       tg.setBackgroundColor("#0A0E0C");
+      /* разворачиваем на весь экран и красим шапку под тему */
+      if (tg.expand) tg.expand();
+      if (tg.setHeaderColor) tg.setHeaderColor("#0A0E0C");
     } catch (e) { /* вне Telegram — игнорируем */ }
   }
 
