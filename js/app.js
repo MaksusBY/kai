@@ -525,9 +525,16 @@
            "const APP_DATA = " + JSON.stringify(payload, null, 2) + ";\n";
   }
 
+  /* Коммит js/data.js. Если файл успел измениться (конфликт sha на GitHub) —
+     берём новый sha и повторяем, до 3 попыток. Раньше это падало с
+     «✗ Ошибка GitHub: js/data.js does not match …». */
   function commitDataFile(reason, done) {
     if (!gh.cfg.token) { if (done) done(new Error("Токен не задан")); return; }
     setGhStatus("Сохранение в GitHub…");
+    commitOnce(reason, done, 0);
+  }
+
+  function commitOnce(reason, done, attempt) {
     var sha = null;
     fetch(ghUrl + "?ref=" + GH.branch, { headers: ghHeaders() })
       .then(function (r) {
@@ -562,7 +569,14 @@
         if (done) done(null);
       })
       .catch(function (err) {
-        setGhStatus("✗ Ошибка GitHub: " + (err && err.message ? err.message : err));
+        var msg = err && err.message ? String(err.message) : "";
+        /* файл изменился во время нашего сохранения — обновляем sha и пробуем ещё */
+        if (attempt < 3 && /does not match/i.test(msg)) {
+          setGhStatus("Файл только что обновился — повторяю сохранение…");
+          setTimeout(function () { commitOnce(reason, done, attempt + 1); }, 700);
+          return;
+        }
+        setGhStatus("✗ Ошибка GitHub: " + msg);
         if (done) done(err);
       });
   }
@@ -903,7 +917,10 @@
 
     var nowBtn = el("button", "btn btn--block", "Сохранить в GitHub сейчас");
     nowBtn.type = "button";
-    nowBtn.addEventListener("click", function () { commitDataFile("вручную"); });
+    nowBtn.addEventListener("click", function () {
+      if (syncTimer) { clearTimeout(syncTimer); syncTimer = null; }
+      commitDataFile("вручную");
+    });
     ghSec.appendChild(nowBtn);
 
     ghSec.appendChild(el("p", "ed-hint",
