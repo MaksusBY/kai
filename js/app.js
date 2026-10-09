@@ -22,6 +22,21 @@
     } catch (e) {}
   }
 
+  /* ================= Доступ к редактору =================
+     Редактор доступен только владельцу — по Telegram ID.
+     Свой ID можно узнать у бота @userinfobot.
+     Запасной вход при открытии в обычном браузере: ...?edit=1 */
+  var OWNER_ID = 791310922; // Telegram ID владельца
+
+  function isOwner() {
+    if (OWNER_ID && tg && tg.initDataUnsafe && tg.initDataUnsafe.user &&
+        tg.initDataUnsafe.user.id === OWNER_ID) {
+      return true;
+    }
+    if (/[?&]edit=1\b/.test(window.location.search)) return true;
+    return false;
+  }
+
   /* ================= Справочники ================= */
 
   var DAYS = APP_DATA.days;
@@ -278,7 +293,7 @@
       addBtn.addEventListener("click", function () {
         openEditor();
       });
-      empty.appendChild(addBtn);
+      if (isOwner()) empty.appendChild(addBtn);
 
       scheduleRoot.appendChild(empty);
       return;
@@ -1108,9 +1123,12 @@
     render();
   }
 
-  Array.prototype.forEach.call(document.querySelectorAll(".js-edit"), function (btn) {
-    btn.addEventListener("click", openEditor);
-  });
+  if (isOwner()) {
+    Array.prototype.forEach.call(document.querySelectorAll(".js-edit"), function (btn) {
+      btn.hidden = false;
+      btn.addEventListener("click", openEditor);
+    });
+  }
 
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && !editorNode.hidden) closeEditor();
