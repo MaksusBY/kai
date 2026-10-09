@@ -419,6 +419,137 @@
     }
   }
 
+  /* ================= GitHub: авто-обновление data.js =================
+     При правках приложение отправляет новый js/data.js прямо в
+     репозиторий через GitHub API. Нужен fine-grained токен с правом
+     «Contents: Read and write» на этот репозиторий. Токен хранится
+     только в localStorage этого браузера и в код не попадает. */
+
+  var GH = {
+    owner: "MaksusBY",
+    repo: "kai",
+    path: "js/data.js",
+    branch: "main"
+  };
+  var GH_KEY = "scheduleApp:github";
+
+  var gh = {
+    cfg: { token: "", auto: true },
+    load: function () {
+      var raw = null;
+      try { raw = localStorage.getItem(GH_KEY); } catch (e) {}
+      if (raw) {
+        try {
+          var v = JSON.parse(raw);
+          if (v && typeof v === "object") {
+            this.cfg.token = v.token || "";
+            this.cfg.auto = v.auto !== false;
+          }
+        } catch (e) {}
+      }
+    },
+    save: function () {
+      try { localStorage.setItem(GH_KEY, JSON.stringify(this.cfg)); } catch (e) {}
+    }
+  };
+  gh.load();
+
+  var ghStatusNode = null;
+
+  function ghDefaultStatus() {
+    if (!gh.cfg.token) return "Токен не задан — правки сохраняются только в этом браузере.";
+    if (!gh.cfg.auto) return "Токен задан, авто-обновление выключено.";
+    return "Включено — правки уходят в " + GH.owner + "/" + GH.repo + "/" + GH.path + ".";
+  }
+
+  function setGhStatus(msg) {
+    if (ghStatusNode) ghStatusNode.textContent = msg;
+  }
+
+  var ghUrl = "https://api.github.com/repos/" + GH.owner + "/" + GH.repo + "/contents/" + GH.path;
+
+  function ghHeaders() {
+    return {
+      "Authorization": "Bearer " + gh.cfg.token,
+      "Accept": "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28"
+    };
+  }
+
+  /* UTF-8 → base64 (русские буквы в названиях предметов) */
+  function b64utf8(str) {
+    var bytes = new TextEncoder().encode(str);
+    var bin = "";
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+
+  function dataFileText() {
+    var stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+    var payload = {
+      meta: store.data.meta,
+      days: APP_DATA.days,
+      SCHEDULE: store.data.SCHEDULE
+    };
+    return "/* Расписание — обновлено из приложения (" + stamp + ") */\n" +
+           "const APP_DATA = " + JSON.stringify(payload, null, 2) + ";\n";
+  }
+
+  function commitDataFile(reason, done) {
+    if (!gh.cfg.token) { if (done) done(new Error("Токен не задан")); return; }
+    setGhStatus("Сохранение в GitHub…");
+    var sha = null;
+    fetch(ghUrl + "?ref=" + GH.branch, { headers: ghHeaders() })
+      .then(function (r) {
+        if (r.status === 404) return null; // файла ещё нет — создадим
+        if (!r.ok) return r.json().then(function (j) {
+          throw new Error((j && j.message) || ("HTTP " + r.status));
+        });
+        return r.json();
+      })
+      .then(function (info) {
+        sha = info && info.sha ? info.sha : null;
+        var body = {
+          message: "Расписание: обновление из приложения" + (reason ? " (" + reason + ")" : ""),
+          content: b64utf8(dataFileText()),
+          branch: GH.branch
+        };
+        if (sha) body.sha = sha;
+        return fetch(ghUrl, {
+          method: "PUT",
+          headers: Object.assign({ "Content-Type": "application/json" }, ghHeaders()),
+          body: JSON.stringify(body)
+        });
+      })
+      .then(function (r) {
+        if (!r.ok) return r.json().then(function (j) {
+          throw new Error((j && j.message) || ("HTTP " + r.status));
+        });
+        return r.json();
+      })
+      .then(function () {
+        setGhStatus("✓ Сохранено в GitHub — " + new Date().toLocaleTimeString());
+        if (done) done(null);
+      })
+      .catch(function (err) {
+        setGhStatus("✗ Ошибка GitHub: " + (err && err.message ? err.message : err));
+        if (done) done(err);
+      });
+  }
+
+  /* не коммитим на каждый символ — ждём паузу 1.2 с */
+  var syncTimer = null;
+
+  function scheduleSync(reason) {
+    if (!gh.cfg.token || !gh.cfg.auto) { setGhStatus(ghDefaultStatus()); return; }
+    if (syncTimer) clearTimeout(syncTimer);
+    setGhStatus("Сохранение в GitHub…");
+    syncTimer = setTimeout(function () {
+      syncTimer = null;
+      commitDataFile(reason);
+    }, 1200);
+  }
+
   /* ================= Двухшаговое подтверждение ================= */
 
   function armedButton(btn, label, confirmLabel, action) {
@@ -490,6 +621,7 @@
         store.data.meta[pair[1]] = pair[0].input.value;
         store.persist();
         renderHeader();
+        scheduleSync("шапка");
       });
     });
 
@@ -692,6 +824,65 @@
     listSec.appendChild(listNode);
     inner.appendChild(listSec);
 
+    /* --- GitHub-синхронизация --- */
+    var ghSec = el("div", "editor-section");
+    ghSec.appendChild(el("div", "editor-section-title", "Авто-обновление data.js (GitHub)"));
+
+    var fToken = buildField("GitHub-токен (fine-grained · Contents: Read and write)", "edToken", "github_pat_…");
+    fToken.input.type = "password";
+    fToken.input.value = gh.cfg.token || "";
+    fToken.input.setAttribute("autocomplete", "off");
+    fToken.input.addEventListener("change", function () {
+      gh.cfg.token = fToken.input.value.trim();
+      gh.save();
+      setGhStatus(ghDefaultStatus());
+    });
+    ghSec.appendChild(fToken.wrap);
+
+    var autoWrap = el("div", "field");
+    autoWrap.appendChild(el("label", null, "Авто-обновление"));
+    var autoChips = el("div", "ed-chips");
+    var autoOn = el("button", "chip", "Включено");
+    var autoOff = el("button", "chip", "Выключено");
+    autoOn.type = "button";
+    autoOff.type = "button";
+    autoOn.addEventListener("click", function () {
+      gh.cfg.auto = true;
+      gh.save();
+      syncAutoChips();
+      scheduleSync("включено");
+    });
+    autoOff.addEventListener("click", function () {
+      gh.cfg.auto = false;
+      gh.save();
+      syncAutoChips();
+      setGhStatus(ghDefaultStatus());
+    });
+    autoChips.appendChild(autoOn);
+    autoChips.appendChild(autoOff);
+    autoWrap.appendChild(autoChips);
+    ghSec.appendChild(autoWrap);
+
+    function syncAutoChips() {
+      autoOn.classList.toggle("active", gh.cfg.auto);
+      autoOff.classList.toggle("active", !gh.cfg.auto);
+    }
+
+    ghStatusNode = el("p", "ed-hint", ghDefaultStatus());
+    ghSec.appendChild(ghStatusNode);
+
+    var nowBtn = el("button", "btn btn--block", "Сохранить в GitHub сейчас");
+    nowBtn.type = "button";
+    nowBtn.addEventListener("click", function () { commitDataFile("вручную"); });
+    ghSec.appendChild(nowBtn);
+
+    ghSec.appendChild(el("p", "ed-hint",
+      "Создай fine-grained токен на github.com/settings/personal-access-tokens: " +
+      "доступ к репозиторию " + GH.owner + "/" + GH.repo + ", право Contents → Read and write. " +
+      "Токен хранится только в этом браузере."));
+    syncAutoChips();
+    inner.appendChild(ghSec);
+
     /* --- инструменты --- */
     var tools = el("div", "editor-section");
     tools.appendChild(el("div", "editor-section-title", "Данные"));
@@ -713,6 +904,7 @@
       renderEdList();
       render();
       toast("Расписание очищено");
+      scheduleSync("очистка");
     });
     toolsGrid.appendChild(clearBtn);
 
@@ -726,6 +918,7 @@
       render();
       closeEditor();
       toast("Демо-данные восстановлены");
+      scheduleSync("демо");
     });
     toolsGrid.appendChild(demoBtn);
 
@@ -791,6 +984,7 @@
           hideForm();
           renderEdList();
           render();
+          scheduleSync("удаление");
         });
         actionsBox.appendChild(delBtn);
 
@@ -888,6 +1082,7 @@
       renderEdList();
       render();
       haptic("impact");
+      scheduleSync("пара");
 
     }
 
