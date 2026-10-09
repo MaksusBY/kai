@@ -161,6 +161,16 @@
   };
   store.load();
 
+  /* Версия данных — по ней приложение понимает, что на GitHub лежит
+     расписание новее локального, и подтягивает его у всех устройств. */
+  function stampVersion() {
+    var v = Date.now();
+    if (store.data.version && v <= store.data.version) v = store.data.version + 1;
+    store.data.version = v;
+    store.persist();
+    return v;
+  }
+
   /* ================= Состояние ================= */
 
   var t = todayKey();
@@ -380,7 +390,8 @@
     var payload = {
       meta: store.data.meta,
       days: APP_DATA.days,
-      SCHEDULE: store.data.SCHEDULE
+      SCHEDULE: store.data.SCHEDULE,
+      version: stampVersion()
     };
     return "/* Расписание — сгенерировано в приложении */\n" +
            "const APP_DATA = " + JSON.stringify(payload, null, 2) + ";\n";
@@ -507,7 +518,8 @@
     var payload = {
       meta: store.data.meta,
       days: APP_DATA.days,
-      SCHEDULE: store.data.SCHEDULE
+      SCHEDULE: store.data.SCHEDULE,
+      version: stampVersion()
     };
     return "/* Расписание — обновлено из приложения (" + stamp + ") */\n" +
            "const APP_DATA = " + JSON.stringify(payload, null, 2) + ";\n";
@@ -1137,12 +1149,57 @@
     if (e.key === "Escape" && !editorNode.hidden) closeEditor();
   });
 
+  /* ================= Авто-обновление расписания у всех =================
+     При открытии приложение берёт свежий js/data.js (в обход кэша),
+     сравнивает поле version со своей копией в localStorage и, если на
+     GitHub версия новее, подменяет данные. Так правки доходят до всех
+     устройств без ручной очистки кэша. */
+
+  function extractData(text) {
+    var s = String(text);
+    var start = s.indexOf("{");
+    var end = s.lastIndexOf("}");
+    if (start < 0 || end <= start) return null;
+    try { return JSON.parse(s.slice(start, end + 1)); } catch (e) { return null; }
+  }
+
+  function applyRemote(remote) {
+    store.data = {
+      meta: deep(remote.meta),
+      SCHEDULE: deep(remote.SCHEDULE),
+      version: remote.version
+    };
+    store.sortAll();
+    store.persist();
+    renderHeader();
+    syncWeeks();
+    syncDays();
+    render();
+  }
+
+  function checkForUpdates() {
+    if (!window.fetch) return;
+    fetch("js/data.js?ts=" + Date.now(), { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.text() : null; })
+      .then(function (text) {
+        if (!text) return;
+        var remote = extractData(text);
+        if (!remote || !remote.SCHEDULE || !remote.meta) return;
+        var rv = remote.version || 0;
+        var lv = store.data.version || 0;
+        if (rv <= lv) return;
+        applyRemote(remote);
+      })
+      .catch(function () { /* офлайн — работаем с локальной копией */ });
+  }
+
   /* ================= Старт ================= */
 
   renderHeader();
   syncWeeks();
   syncDays();
   render();
+  checkForUpdates();
 
   if (tg) {
     try { tg.ready(); } catch (e) {}
