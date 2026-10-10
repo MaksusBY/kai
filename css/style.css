@@ -33,6 +33,15 @@
   --badge-def-fg:  #C9D4CF;
 
   --radius:        14px;
+
+  /* обои фона: на десктопе — 4K, на телефоне — лёгкая версия (см. медиазапрос ниже) */
+  --bg-image: url("../165025-dark_blue_imac_color_matching_wallpaper_for_ipad_or_desktop-3840x2160.jpg");
+}
+
+/* На тач-устройствах 4K-картинка декодируется в память целиком и тормозит
+   скролл — подменяем на уменьшенную копию (1600px, ~60 КБ) */
+@media (hover: none), (max-width: 760px) {
+  :root { --bg-image: url("../bg-mobile.jpg"); }
 }
 
 * { box-sizing: border-box; }
@@ -59,7 +68,8 @@ body::before {
   z-index: -1;
   background:
     linear-gradient(rgba(8, 11, 10, .3), rgba(8, 11, 10, .3)),
-    url("../165025-dark_blue_imac_color_matching_wallpaper_for_ipad_or_desktop-3840x2160.jpg") center / cover no-repeat;
+    var(--bg-image) center / cover no-repeat;
+  transform: translateZ(0);   /* вынести слой на GPU: меньше перерисовок при скролле */
 }
 
 button {
@@ -445,7 +455,8 @@ input {
   z-index: -1;
   background:
     linear-gradient(rgba(8, 11, 10, .45), rgba(8, 11, 10, .45)),
-    url("../165025-dark_blue_imac_color_matching_wallpaper_for_ipad_or_desktop-3840x2160.jpg") center / cover no-repeat;
+    var(--bg-image) center / cover no-repeat;
+  transform: translateZ(0);
 }
 
 .editor-inner { max-width: 640px; margin: 0 auto; }
@@ -657,16 +668,34 @@ input {
 
 .export-box .btn { margin-top: 10px; }
 
-/* ---------- Стекло: матовый фон поверх обоев, как на iOS ---------- */
+/* ---------- Матовое стекло: полупрозрачный фон поверх обоев ----------
+   ВАЖНО: backdrop-filter (размытие фона) на телефоне пересчитывается каждый
+   кадр и сильно тормозит скролл. По умолчанию используем плотный
+   полупрозрачный фон без размытия, а настоящее стекло включаем только
+   на десктопе (мышь + широкий экран). */
 .card,
-.editor,
 .ed-item,
 .week-btn:not(.active),
 .day:not(.active) {
-  background: rgba(16, 22, 20, .55);
-  -webkit-backdrop-filter: blur(18px) saturate(1.4);
-  backdrop-filter: blur(18px) saturate(1.4);
+  background: rgba(16, 22, 20, .78);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+
+/* редактор — свой полупрозрачный слой поверх затемнённых обоев, без blur */
+.editor {
+  background: rgba(16, 22, 20, .68);
+}
+
+@media (hover: hover) and (pointer: fine) and (min-width: 760px) {
+  .card,
+  .ed-item,
+  .week-btn:not(.active),
+  .day:not(.active) {
+    background: rgba(16, 22, 20, .55);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    backdrop-filter: blur(18px) saturate(1.4);
+  }
+  .editor { background: rgba(16, 22, 20, .55); }
 }
 
 /* ---------- Выбранная вкладка — светло-небесный ---------- */
