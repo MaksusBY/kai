@@ -300,7 +300,7 @@
       var empty = el("div", "empty");
       if (state.day === "вс") {
         empty.classList.add("empty--sunday");
-        empty.appendChild(el("div", "empty-title", "Кто учиться по воскресеньям?"));
+        empty.appendChild(el("div", "empty-title", "Кто учится по воскресеньям?"));
         empty.appendChild(el("div", null, "Воскресенье — свободный день"));
       } else {
         empty.appendChild(el("div", "empty-title", "Занятий нет"));
@@ -312,7 +312,8 @@
       addBtn.addEventListener("click", function () {
         openEditor();
       });
-      if (isOwner()) empty.appendChild(addBtn);
+      /* на воскресенье кнопку добавления не показываем */
+      if (isOwner() && state.day !== "вс") empty.appendChild(addBtn);
 
       scheduleRoot.appendChild(empty);
       return;
