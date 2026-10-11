@@ -173,9 +173,24 @@
 
   /* ================= Состояние ================= */
 
+  /* Автоопределение номера недели: счёт идёт с 1 сентября 2026 года
+     (01.09–04.09 — 1-я неделя), дальше недели чередуются 1, 2, 1, 2, …
+     Граница недели — понедельник; опорная точка — понедельник 31.08.2026
+     (начало недели, в которую входит 01.09.2026). */
+  var WEEK_EPOCH = new Date(2026, 7, 31).getTime(); /* понедельник, 31.08.2026 */
+
+  function autoWeek() {
+    var now = new Date();
+    now.setHours(0, 0, 0, 0);
+    var diff = Math.floor((now.getTime() - WEEK_EPOCH) / 86400000);
+    /* до 01.09.2026 счёт ещё не начался — используем defaultWeek из данных */
+    if (diff < 0) return APP_DATA.meta.defaultWeek || 1;
+    return (Math.floor(diff / 7) % 2 === 0) ? 1 : 2;
+  }
+
   var t = todayKey();
   var state = {
-    week: APP_DATA.meta.defaultWeek || 1,
+    week: autoWeek(),
     day: DAYS.indexOf(t) >= 0 ? t : DAYS[0]
   };
   if (!store.data.SCHEDULE[state.week]) state.week = 1;
