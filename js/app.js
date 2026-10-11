@@ -310,8 +310,10 @@
   function render() {
     var pairs = store.pairs(state.week, state.day);
     scheduleRoot.textContent = "";
+    scheduleRoot.classList.remove("is-empty");
 
     if (!pairs.length) {
+      scheduleRoot.classList.add("is-empty");
       var empty = el("div", "empty");
       if (state.day === "вс") {
         empty.classList.add("empty--sunday");

@@ -90,6 +90,10 @@ input {
   max-width: 640px;
   margin: 0 auto;
   padding: 14px 16px calc(20px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* ---------- Верх: баннер + группа ---------- */
@@ -222,6 +226,18 @@ input {
 
 .schedule {
   margin-top: 12px;
+}
+
+/* пустой день: сообщение («Занятий нет» / воскресенье) — по центру экрана */
+#schedule.is-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#schedule.is-empty .empty {
+  width: 100%;
 }
 
 .row {
@@ -772,19 +788,19 @@ input {
   }
 
   .week-btn {
-    padding: 5px 0;
-    font-size: 12px;
+    padding: 10px 0;
+    font-size: 13.5px;
     border-radius: 9px;
   }
 
   .days {
     gap: 4px;
-    margin-bottom: 2px;
+    margin-bottom: 3px;
   }
 
   .day {
-    padding: 4px 0;
-    font-size: 12px;
+    padding: 9px 0;
+    font-size: 13.5px;
     border-radius: 8px;
   }
 
