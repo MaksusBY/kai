@@ -386,6 +386,12 @@ input {
   color: var(--text-dim);
 }
 
+/* воскресенье — шуточная подпись */
+.empty--sunday .empty-title {
+  font-size: 16px;
+  color: var(--amber);
+}
+
 .empty .btn {
   margin-top: 16px;
 }

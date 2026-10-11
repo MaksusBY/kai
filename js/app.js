@@ -298,8 +298,14 @@
 
     if (!pairs.length) {
       var empty = el("div", "empty");
-      empty.appendChild(el("div", "empty-title", "Занятий нет"));
-      empty.appendChild(el("div", null, (FULL_DAY[state.day] || "") + " — свободный день"));
+      if (state.day === "вс") {
+        empty.classList.add("empty--sunday");
+        empty.appendChild(el("div", "empty-title", "Кто учиться по воскресеньям?"));
+        empty.appendChild(el("div", null, "Воскресенье — свободный день"));
+      } else {
+        empty.appendChild(el("div", "empty-title", "Занятий нет"));
+        empty.appendChild(el("div", null, (FULL_DAY[state.day] || "") + " — свободный день"));
+      }
 
       var addBtn = el("button", "btn btn--primary", "＋ Добавить пару");
       addBtn.type = "button";
