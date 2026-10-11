@@ -738,3 +738,126 @@ input {
   background: rgba(154, 208, 250, .22);
   color: #AFEEEE;
 }
+
+/* ---------- Компактный режим на телефонах ----------
+   Уплотняем отступы и шрифты, чтобы на экране телефона помещалось
+   больше пар без прокрутки. */
+@media (max-width: 480px) {
+  .app {
+    padding: 6px 12px calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .top {
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  .banner {
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+
+  .banner-icon { width: 11px; height: 11px; }
+
+  .group-id { font-size: 14px; }
+  .group-course { margin-top: 1px; font-size: 11px; }
+  .group-icon { width: 21px; height: 21px; }
+
+  .icon-btn { width: 23px; height: 23px; }
+  .icon-btn svg { width: 15px; height: 15px; }
+
+  .week-toggle {
+    gap: 5px;
+    margin-bottom: 6px;
+  }
+
+  .week-btn {
+    padding: 5px 0;
+    font-size: 12px;
+    border-radius: 9px;
+  }
+
+  .days {
+    gap: 4px;
+    margin-bottom: 2px;
+  }
+
+  .day {
+    padding: 4px 0;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+
+  .schedule { margin-top: 4px; }
+
+  .row {
+    gap: 8px;
+    padding: 6px 0;
+  }
+
+  .times {
+    width: 40px;
+    gap: 2px;
+    padding: 7px 6px;
+    font-size: 12px;
+  }
+
+  .card-body { padding: 8px 10px 8px; }
+
+  .card-head { gap: 7px; }
+
+  .title {
+    font-size: 13px;
+    line-height: 1.22;
+  }
+
+  .title.no-pair { font-size: 12.5px; }
+
+  .subblock,
+  .pair-box {
+    padding: 7px 9px 8px;
+    border-radius: 9px;
+  }
+
+  .subblock + .subblock { margin-top: 6px; }
+
+  .subblock .title { margin-top: 3px; }
+
+  .subblock-label { font-size: 10.5px; }
+
+  .subblock-empty {
+    margin-top: 4px;
+    font-size: 12px;
+  }
+
+  .badge {
+    padding: 2px 6px;
+    font-size: 9.5px;
+    border-radius: 7px;
+  }
+
+  .meta {
+    gap: 5px;
+    margin-top: 4px;
+    font-size: 11px;
+  }
+
+  .meta-icon { width: 12px; height: 12px; }
+
+  .empty {
+    padding: 18px 0 14px;
+    font-size: 12.5px;
+  }
+
+  .edit-link {
+    margin-top: 10px;
+    padding: 4px 0;
+    font-size: 11.5px;
+  }
+
+  .credit {
+    margin-top: 8px;
+    padding: 4px 0;
+    font-size: 11px;
+  }
+}
