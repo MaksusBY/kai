@@ -473,8 +473,17 @@
   /* ================= GitHub: авто-обновление data.js =================
      При правках приложение отправляет новый js/data.js прямо в
      репозиторий через GitHub API. Нужен fine-grained токен с правом
-     «Contents: Read and write» на этот репозиторий. Токен хранится
-     только в localStorage этого браузера и в код не попадает. */
+     «Contents: Read and write» на этот репозиторий.
+
+     Где хранится токен. Раньше — только в localStorage WebView, но
+     Telegram периодически чистит данные веб-views (очистка кэша в
+     настройках, нехватка места, на iOS — регулярная чистка WKWebView),
+     и токен «пропадал», хотя пользователь ничего не делал. Поэтому
+     основное хранилище теперь — облачное CloudStorage Telegram:
+     серверное, привязано к пользователю и боту, переживает чистку кэша
+     и одинаково на всех устройствах. localStorage остаётся запасным
+     вариантом (вне Telegram и пока облако не ответило). Токен в код
+     репозитория не попадает. */
 
   var GH = {
     owner: "MaksusBY",
@@ -482,10 +491,13 @@
     path: "js/data.js",
     branch: "main"
   };
-  var GH_KEY = "scheduleApp:github";
+  var GH_KEY = "scheduleApp:github";        // localStorage — запасное хранилище
+  var GH_CLOUD_KEY = "scheduleApp_github";  // CloudStorage (в ключах нельзя «:»)
 
   var gh = {
     cfg: { token: "", auto: true },
+    dirty: false,      // владелец ввёл токен вручную — не затираем его облаком
+    cloudSaved: false, // токен подтверждён в облаке Telegram
     load: function () {
       var raw = null;
       try { raw = localStorage.getItem(GH_KEY); } catch (e) {}
@@ -501,16 +513,92 @@
     },
     save: function () {
       try { localStorage.setItem(GH_KEY, JSON.stringify(this.cfg)); } catch (e) {}
+      this.cloudWrite();
+    },
+    /* запись конфига в облако Telegram — переживает очистку кэша WebView */
+    cloudWrite: function () {
+      if (!cloudAvailable()) return;
+      var self = this;
+      try {
+        if (!self.cfg.token) {
+          tg.CloudStorage.removeItem(GH_CLOUD_KEY, function () {});
+          return;
+        }
+        tg.CloudStorage.setItem(GH_CLOUD_KEY, JSON.stringify(self.cfg), function (err) {
+          if (!err) self.cloudSaved = true;
+          setGhStatus(ghDefaultStatus());
+        });
+      } catch (e) {}
+    },
+    /* чтение из облака при старте. Облако важнее localStorage (свежий
+       токен на телефоне подхватится и на десктопе), но не затирает то,
+       что владелец только что ввёл руками в этой сессии (dirty). */
+    cloudRead: function () {
+      if (!cloudAvailable()) return;
+      var self = this;
+      try {
+        tg.CloudStorage.getItem(GH_CLOUD_KEY, function (err, raw) {
+          if (err || !raw) {
+            // в облаке пусто — переносим токен из localStorage
+            if (self.cfg.token) self.cloudWrite();
+            return;
+          }
+          var v = null;
+          try { v = JSON.parse(raw); } catch (e) {}
+          if (!v || typeof v !== "object" || typeof v.token !== "string") return;
+          if (self.dirty) {
+            // успели ввести токен руками — наш важнее, копируем его в облако
+            if (self.cfg.token) self.cloudWrite();
+            return;
+          }
+          if (v.token === self.cfg.token && typeof v.auto === "boolean" && v.auto === self.cfg.auto) {
+            self.cloudSaved = true;
+            ghSyncUi();
+            return;
+          }
+          self.cfg.token = v.token;
+          if (typeof v.auto === "boolean") self.cfg.auto = v.auto;
+          self.cloudSaved = true;
+          // синхронизируем UI панели редактирования, если она открыта
+          try { if (ghTokenInput) ghTokenInput.value = self.cfg.token; } catch (e) {}
+          try { if (ghChipsSync) ghChipsSync(); } catch (e) {}
+          ghSyncUi();
+        });
+      } catch (e) {}
     }
   };
   gh.load();
+  gh.cloudRead();
 
   var ghStatusNode = null;
+  var ghTokenInput = null; // поле токена в открытой панели редактора
+  var ghChipsSync = null;  // синхронизация чипсов «Авто-обновление»
+
+  /* CloudStorage есть только в Telegram версии 6.9+ и только внутри
+     Mini App. Вне Telegram не трогаем: SDK в этом случае сыплет ошибкой
+     в консоль и бросает исключение. */
+  function cloudAvailable() {
+    if (!tg || !tg.CloudStorage) return false;
+    if (typeof tg.isVersionAtLeast === "function") return tg.isVersionAtLeast("6.9");
+    return true; // версия неизвестна — пробуем, ошибку обработает callback
+  }
+
+  /* подтягиваем открытую панель редактора к свежим значениям gh.cfg */
+  function ghSyncUi() {
+    setGhStatus(ghDefaultStatus());
+    try { if (ghChipsSync) ghChipsSync(); } catch (e) {}
+    if (ghTokenInput && document.contains(ghTokenInput) && !ghTokenInput.value) {
+      ghTokenInput.value = gh.cfg.token;
+    }
+  }
 
   function ghDefaultStatus() {
     if (!gh.cfg.token) return "Токен не задан — правки сохраняются только в этом браузере.";
-    if (!gh.cfg.auto) return "Токен задан, авто-обновление выключено.";
-    return "Включено — правки уходят в " + GH.owner + "/" + GH.repo + "/" + GH.path + ".";
+    var where = gh.cloudSaved
+      ? "Токен сохранён в Telegram (облако) — переживёт очистку кэша WebView. "
+      : "Токен задан. ";
+    if (!gh.cfg.auto) return where + "Авто-обновление выключено.";
+    return where + "Включено — правки уходят в " + GH.owner + "/" + GH.repo + "/" + GH.path + ".";
   }
 
   function setGhStatus(msg) {
@@ -898,8 +986,10 @@
     fToken.input.type = "password";
     fToken.input.value = gh.cfg.token || "";
     fToken.input.setAttribute("autocomplete", "off");
+    ghTokenInput = fToken.input;
     fToken.input.addEventListener("change", function () {
       gh.cfg.token = fToken.input.value.trim();
+      gh.dirty = true; /* введено руками в этой сессии — облако не затирает */
       gh.save();
       setGhStatus(ghDefaultStatus());
     });
@@ -934,6 +1024,8 @@
       autoOff.classList.toggle("active", !gh.cfg.auto);
     }
 
+    ghChipsSync = syncAutoChips;
+
     ghStatusNode = el("p", "ed-hint", ghDefaultStatus());
     ghSec.appendChild(ghStatusNode);
 
@@ -948,7 +1040,8 @@
     ghSec.appendChild(el("p", "ed-hint",
       "Создай fine-grained токен на github.com/settings/personal-access-tokens: " +
       "доступ к репозиторию " + GH.owner + "/" + GH.repo + ", право Contents → Read and write. " +
-      "Токен хранится только в этом браузере."));
+      "В Telegram токен сохраняется в CloudStorage (переживает очистку кэша WebView). " +
+      "В обычном браузере — только в localStorage. В код репозитория токен не попадает."));
     syncAutoChips();
     inner.appendChild(ghSec);
 
@@ -995,7 +1088,7 @@
     tools.appendChild(el("p", "ed-hint",
       "Сначала расписание хранится в этом браузере. Чтобы оно всегда открывалось " +
       "в Telegram и на других устройствах — нажми «Скопировать data.js» и замени " +
-      "файл на GitHub (инструкция в README.md)."));
+      "файл на GitHub или просто включи авто-обновление через токен внизу."));
     inner.appendChild(tools);
 
     editorNode.appendChild(inner);
@@ -1214,6 +1307,8 @@
     syncWeeks();
     syncDays();
     render();
+    // Пробуем подтянуть токен из облака, если он там появился
+    try { if (gh && gh.cloudRead) gh.cloudRead(); } catch (e) {}
   }
 
   function checkForUpdates() {
@@ -1239,6 +1334,9 @@
   syncDays();
   render();
   checkForUpdates();
+  /* ещё одна попытка прочитать токен из облака: WebView мог ответить
+     не сразу, а статус в редакторе должен быть актуальным */
+  try { if (gh && gh.cloudRead) setTimeout(function () { gh.cloudRead(); }, 200); } catch (e) {}
 
   if (tg) {
     try { tg.ready(); } catch (e) {}
