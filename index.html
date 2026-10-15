@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0A0E0C">
+  <!-- CSP: разрешаем только свои файлы, SDK Telegram и аналитику Umami.
+       Это не даёт постороннему/внедрённому скрипту выполниться и прочитать
+       сохранённый GitHub-токен или отправить его на чужой адрес. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' https://telegram.org https://cloud.umami.is; connect-src 'self' https://api.github.com https://cloud.umami.is https://gateway.umami.is; img-src 'self' data:; style-src 'self' 'unsafe-inline'; base-uri 'self'; object-src 'none'">
   <title>Расписание занятий</title>
   <link rel="stylesheet" href="css/style.css?v=7">
   <!-- SDK Telegram Mini Apps (вне Telegram просто не сработает, ошибок не даёт) -->
@@ -63,7 +68,7 @@
 
 
   <script src="js/data.js"></script>
-  <script src="js/app.js?v=13"></script>
+  <script src="js/app.js?v=14"></script>
   <script defer src="https://cloud.umami.is/script.js" data-website-id="db787b0e-52c6-49af-bf29-662bb009b08b"></script>
 </body>
 </html>
