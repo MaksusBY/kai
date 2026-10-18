@@ -120,6 +120,11 @@ input {
   text-transform: uppercase;
 }
 
+/* Пустое уведомление — не показываем жёлтый фон, свечение и иконку */
+.banner[hidden] {
+  display: none;
+}
+
 .banner-icon {
   width: 13px;
   height: 13px;

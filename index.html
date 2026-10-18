@@ -10,7 +10,7 @@
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; script-src 'self' https://telegram.org https://cloud.umami.is; connect-src 'self' https://api.github.com https://cloud.umami.is https://gateway.umami.is; img-src 'self' data:; style-src 'self' 'unsafe-inline'; base-uri 'self'; object-src 'none'">
   <title>Расписание занятий</title>
-  <link rel="stylesheet" href="css/style.css?v=7">
+  <link rel="stylesheet" href="css/style.css?v=8">
   <!-- SDK Telegram Mini Apps (вне Telegram просто не сработает, ошибок не даёт) -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
@@ -19,7 +19,7 @@
 
     <!-- Верхняя строка: предупреждение + данные группы -->
     <header class="top">
-      <div class="banner">
+      <div class="banner" id="banner" hidden>
         <svg class="banner-icon" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 2.2 1.6 21h20.8L12 2.2Zm-1 6.4h2v6.2h-2V8.6Zm0 7.8h2v2.1h-2v-2.1Z"/>
         </svg>
@@ -68,7 +68,7 @@
 
 
   <script src="js/data.js"></script>
-  <script src="js/app.js?v=14"></script>
+  <script src="js/app.js?v=15"></script>
   <script defer src="https://cloud.umami.is/script.js" data-website-id="db787b0e-52c6-49af-bf29-662bb009b08b"></script>
 </body>
 </html>

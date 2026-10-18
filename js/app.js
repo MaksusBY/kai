@@ -207,7 +207,9 @@
   /* ================= Основной вид ================= */
 
   function renderHeader() {
-    document.getElementById("bannerText").textContent = store.data.meta.banner;
+    var bannerMsg = String(store.data.meta.banner || "").trim();
+    document.getElementById("bannerText").textContent = bannerMsg;
+    document.getElementById("banner").hidden = !bannerMsg;
     document.getElementById("groupId").textContent = store.data.meta.group;
     document.getElementById("groupCourse").textContent = store.data.meta.course;
   }
